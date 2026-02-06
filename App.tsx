@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LiquidBackground from './components/LiquidBackground';
 import SoundButton from './components/SoundButton';
 import RecorderButton from './components/RecorderButton';
@@ -7,7 +7,7 @@ import { SoundItem, SoundCategory } from './types';
 import { Volume2, VolumeX, Sparkles, Moon } from 'lucide-react';
 import { audioEngine } from './services/audioEngine';
 
-// Placeholder Ad Component
+// AdSense Component
 interface AdBannerProps {
   variant?: 'default' | 'thin';
 }
@@ -15,28 +15,38 @@ interface AdBannerProps {
 const AdBanner: React.FC<AdBannerProps> = ({ variant = 'default' }) => {
   const isThin = variant === 'thin';
 
+  useEffect(() => {
+    try {
+      // Push the ad to Google's queue
+      // Using 'any' cast to avoid TS errors with window.adsbygoogle
+      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+    } catch (e) {
+      console.error("AdSense push error:", e);
+    }
+  }, []);
+
   return (
-    // Removed default margins (mt/mb) to let parent container control spacing
-    <div className={`w-full max-w-7xl mx-auto px-4 md:px-6 ${isThin ? 'mb-6' : ''}`}>
+    <div className="w-full max-w-7xl mx-auto px-4 md:px-6">
       <div className={`
         bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg 
-        flex items-center justify-center text-center text-gray-500
-        ${isThin ? 'p-1' : 'p-4 flex-col'}
+        flex flex-col items-center justify-center text-center overflow-hidden
+        ${isThin ? 'p-2 min-h-[100px]' : 'p-4 min-h-[280px]'}
       `}>
         {!isThin && (
-          <span className="font-semibold text-gray-400 mb-1 text-xs uppercase tracking-widest">Sponsored</span>
+          <span className="font-semibold text-gray-400 mb-2 text-xs uppercase tracking-widest self-start">Sponsored</span>
         )}
         
-        <div className={`
-          w-full bg-white/30 rounded flex items-center justify-center border border-dashed border-gray-400/30 relative overflow-hidden
-          ${isThin ? 'h-10' : 'h-16'}
-        `}>
-          {isThin && (
-            <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 border border-gray-400/40 px-1 rounded bg-white/40">AD</span>
-          )}
-          <p className={isThin ? 'text-xs text-gray-500/80' : 'text-sm'}>
-             {isThin ? '광고 영역' : '광고 배너 영역 (Google AdSense 등)'}
-          </p>
+        <div className="w-full bg-white/10 rounded flex items-center justify-center relative overflow-hidden w-full h-full">
+           {/* 
+              Google AdSense Code 
+              IMPORTANT: You must replace 'YOUR_AD_SLOT_ID' with your actual data-ad-slot ID from Google AdSense Console.
+           */}
+           <ins className="adsbygoogle"
+             style={{ display: 'block', width: '100%', minHeight: isThin ? '90px' : '250px' }}
+             data-ad-client="ca-pub-7969346905229420"
+             data-ad-slot="YOUR_AD_SLOT_ID"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
         </div>
       </div>
     </div>
@@ -104,8 +114,8 @@ const App: React.FC = () => {
       <LiquidBackground />
 
       {/* Header */}
-      <header className="relative z-10 px-6 pt-8 pb-2 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-4 md:mb-0">
+      <header className="relative z-10 px-6 pt-5 pb-1 flex flex-col md:flex-row items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-1 md:mb-0">
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-extrabold">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-600">
@@ -121,22 +131,31 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Content with Sections */}
-      <main className="relative z-10 px-4 md:px-6 pb-24 max-w-7xl mx-auto space-y-12">
-        {/* Top Ad Banner - Thin Variant */}
-        <AdBanner variant="thin" />
+      <main className="relative z-10 px-4 md:px-6 pb-24 max-w-7xl mx-auto">
+        
+        {/* Top Ad Banner - Very tight spacing below */}
+        <div className="mb-1">
+          <AdBanner variant="thin" />
+        </div>
 
         {sections.map((section) => {
           const sectionSounds = SOUNDS.filter(s => s.category === section.id);
           if (sectionSounds.length === 0 && section.id !== SoundCategory.HUMAN) return null;
 
+          // Spacing Logic: 
+          // Human (First): Very tight (mt-2)
+          // Others: Spacious (mt-24) to give breathing room
+          const isHuman = section.id === SoundCategory.HUMAN;
+          const marginTopClass = isHuman ? 'mt-2' : 'mt-24';
+
           return (
-            <section key={section.id} className="animate-fade-in-up">
-              <div className="mb-6 px-2">
+            <section key={section.id} className={`animate-fade-in-up ${marginTopClass}`}>
+              <div className="mb-4 px-2">
                 <div className="flex items-end gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-800 tracking-tight">
+                  <h2 className="text-xl font-bold text-gray-800 tracking-tight">
                     {section.label}
                   </h2>
-                  <span className="text-sm text-gray-500 font-medium mb-1 opacity-80">
+                  <span className="text-xs text-gray-500 font-medium mb-1 opacity-80">
                     {section.desc}
                   </span>
                 </div>
@@ -167,8 +186,8 @@ const App: React.FC = () => {
           );
         })}
         
-        {/* Bottom Area: Grouped to remove excess whitespace */}
-        <div className="flex flex-col gap-2">
+        {/* Bottom Area */}
+        <div className="flex flex-col gap-2 mt-20">
           <AdBanner />
           <div className="flex justify-center opacity-40">
              <span className="text-[10px] font-semibold text-gray-500 tracking-widest font-mono">
