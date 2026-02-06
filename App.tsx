@@ -86,16 +86,21 @@ const App: React.FC = () => {
 
   const handleRecorderPlay = () => {
     // When recorder plays, we just add it to the active set
-    // It is handled internally by HTML Audio element, but we track it for UI
     const newActiveSounds = new Set(activeSounds);
     newActiveSounds.add(RECORDING_ID);
     setActiveSounds(newActiveSounds);
+    
+    // Notify engine to keep session alive for the recording
+    audioEngine.setExternalPlaying(true);
   };
 
   const handleRecorderStop = () => {
     const newActiveSounds = new Set(activeSounds);
     newActiveSounds.delete(RECORDING_ID);
     setActiveSounds(newActiveSounds);
+
+    // Notify engine recording stopped
+    audioEngine.setExternalPlaying(false);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,11 +152,11 @@ const App: React.FC = () => {
 
         {sections.map((section) => {
           const sectionSounds = SOUNDS.filter(s => s.category === section.id);
+          
+          // Hide empty sections unless it's Human (has recorder)
           if (sectionSounds.length === 0 && section.id !== SoundCategory.HUMAN) return null;
 
-          // Spacing Logic: 
-          // Human (First): Very tight (mt-1)
-          // Others: Spacious (mt-24) to give breathing room
+          // Spacing Logic
           const isHuman = section.id === SoundCategory.HUMAN;
           const marginTopClass = isHuman ? 'mt-1' : 'mt-24';
 
@@ -170,6 +175,8 @@ const App: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-3 md:gap-4">
+                
+                {/* Recorder Button (Only in Human Section) */}
                 {section.id === SoundCategory.HUMAN && (
                   <div className="col-span-3">
                     <RecorderButton 
@@ -180,6 +187,7 @@ const App: React.FC = () => {
                   </div>
                 )}
 
+                {/* Sound List */}
                 {sectionSounds.map((sound) => (
                   <SoundButton 
                     key={sound.id} 
@@ -229,7 +237,7 @@ const App: React.FC = () => {
                     : Array.from(activeSounds).map(id => {
                         if (id === RECORDING_ID) return '엄마 목소리';
                         return SOUNDS.find(s => s.id === id)?.label;
-                      }).join(', ')
+                      }).filter(Boolean).join(', ')
                   }
                 </span>
               </div>

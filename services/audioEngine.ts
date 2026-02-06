@@ -1,5 +1,8 @@
 import { SynthType } from '../types';
 
+// A tiny silent mp3 to keep the audio session active on mobile devices
+const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD//////////////////////////////////////////////////////////////////wAAAP7hAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnhAAAAAAAAABAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnhAAAAAAAAABAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAATGF2YzU4LjU0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnhAAAAAAAAABAAAAAAAAAAAAAA';
+
 /**
  * A hybrid audio engine that plays actual audio files if provided,
  * or synthesizes noise (White/Pink/Brown) as a fallback.
@@ -16,6 +19,10 @@ class AudioEngine {
   private masterGain: GainNode | null = null;
   private volumeValue: number = 0.5;
 
+  // Background audio persistence
+  private silentKeeper: HTMLAudioElement | null = null;
+  private isExternalPlaying: boolean = false;
+
   constructor() {
     // Lazy initialization
   }
@@ -26,6 +33,56 @@ class AudioEngine {
       this.masterGain = this.audioContext.createGain();
       this.masterGain.gain.value = this.volumeValue;
       this.masterGain.connect(this.audioContext.destination);
+    }
+  }
+
+  private initSilentKeeper() {
+    if (!this.silentKeeper) {
+      this.silentKeeper = new Audio(SILENT_MP3);
+      this.silentKeeper.loop = true;
+      this.silentKeeper.volume = 0.01; // Non-zero to ensure OS considers it active media
+    }
+  }
+
+  public setExternalPlaying(isPlaying: boolean) {
+    this.isExternalPlaying = isPlaying;
+    this.updateBackgroundState();
+  }
+
+  private updateBackgroundState() {
+    this.initSilentKeeper();
+    const hasActiveAudio = this.sources.size > 0 || this.isExternalPlaying;
+    
+    if (hasActiveAudio) {
+       // Enable Background Mode
+       if (this.silentKeeper && this.silentKeeper.paused) {
+           this.silentKeeper.play().catch(e => console.warn('Silent keeper play failed', e));
+       }
+       
+       if ('mediaSession' in navigator) {
+         navigator.mediaSession.metadata = new MediaMetadata({
+            title: '코자자 🌙',
+            artist: '아기 백색 소음기',
+            album: 'Cozy Sleep Sounds',
+             artwork: [
+                { src: 'https://cdn-icons-png.flaticon.com/512/3094/3094836.png', sizes: '512x512', type: 'image/png' }
+             ]
+         });
+         navigator.mediaSession.playbackState = 'playing';
+         // Dummy handlers to prevent OS from killing the session
+         navigator.mediaSession.setActionHandler('play', () => {});
+         navigator.mediaSession.setActionHandler('pause', () => {});
+         navigator.mediaSession.setActionHandler('stop', () => {});
+       }
+    } else {
+       // Disable Background Mode
+       if (this.silentKeeper && !this.silentKeeper.paused) {
+           this.silentKeeper.pause();
+           this.silentKeeper.currentTime = 0;
+       }
+       if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'none';
+       }
     }
   }
 
@@ -156,6 +213,9 @@ class AudioEngine {
       
       this.sources.set(id, source);
       this.gainNodes.set(id, gainNode);
+
+      // Ensure background persistence
+      this.updateBackgroundState();
     }
   }
 
@@ -173,15 +233,21 @@ class AudioEngine {
         try { source.stop(); } catch(e) {}
         source.disconnect();
         gainNode.disconnect();
-      }, 300);
+        
+        // Remove from tracking maps
+        this.sources.delete(id);
+        this.gainNodes.delete(id);
 
-      this.sources.delete(id);
-      this.gainNodes.delete(id);
+        // Update background state after cleanup
+        this.updateBackgroundState();
+      }, 300);
     }
   }
 
   public stopAll() {
-    this.sources.forEach((_, id) => this.stop(id));
+    // Collect IDs first to avoid iteration issues during deletion
+    const ids = Array.from(this.sources.keys());
+    ids.forEach(id => this.stop(id));
   }
 
   public setVolume(val: number) {

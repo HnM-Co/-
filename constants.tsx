@@ -6,6 +6,11 @@ import {
   PenTool, Mountain, Gem, Zap, ShoppingBag, User, Mic
 } from 'lucide-react';
 
+// INSTRUCTIONS:
+// 1. Create a folder named 'public' in your project root.
+// 2. Create a folder named 'sounds' inside 'public'.
+// 3. Add mp3 files with the filenames listed below (e.g., heartbeat.mp3).
+
 export const SOUNDS: SoundItem[] = [
   // HUMAN (사람소리)
   {
@@ -136,7 +141,7 @@ export const SOUNDS: SoundItem[] = [
     icon: <ShoppingBag className="w-8 h-8" />,
     gradient: 'from-slate-300 to-gray-400',
     synthType: SynthType.WHITE,
-    src: '/sounds/plastic.mp3'
+    src: '/sounds/vinyl.mp3'
   },
   {
     id: 'cafe',

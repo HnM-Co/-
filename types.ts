@@ -1,9 +1,9 @@
 import React from 'react';
 
 export enum SoundCategory {
+  HUMAN = 'HUMAN',   // 사람 소리
   NATURE = 'NATURE', // 자연의 소리
   DAILY = 'DAILY',   // 일상 소리
-  HUMAN = 'HUMAN',   // 사람 소리
 }
 
 // Noise types for our synthesizer to emulate (fallback)
