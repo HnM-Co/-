@@ -15,7 +15,7 @@ export const SOUNDS: SoundItem[] = [
   // HUMAN (사람소리)
   {
     id: 'heartbeat',
-    label: '심장박동',
+    label: '심장박동 소리',
     category: SoundCategory.HUMAN,
     icon: <Heart className="w-8 h-8" />,
     gradient: 'from-red-400 to-red-600',
@@ -24,7 +24,7 @@ export const SOUNDS: SoundItem[] = [
   },
   {
     id: 'shush',
-    label: '쉬소리',
+    label: '쉬~ 소리',
     category: SoundCategory.HUMAN,
     icon: <User className="w-8 h-8" />,
     gradient: 'from-pink-300 to-rose-400',
@@ -44,7 +44,7 @@ export const SOUNDS: SoundItem[] = [
   // NATURE (자연의 소리)
   {
     id: 'waves',
-    label: '파도소리',
+    label: '파도 소리',
     category: SoundCategory.NATURE,
     icon: <Waves className="w-8 h-8" />,
     gradient: 'from-teal-400 to-blue-600',
@@ -53,7 +53,7 @@ export const SOUNDS: SoundItem[] = [
   },
   {
     id: 'forest',
-    label: '숲소리',
+    label: '숲 소리',
     category: SoundCategory.NATURE,
     icon: <Trees className="w-8 h-8" />,
     gradient: 'from-green-400 to-emerald-700',
