@@ -172,6 +172,13 @@ const App: React.FC = () => {
         
         {/* Bottom Ad Banner - Default Variant */}
         <AdBanner />
+
+        {/* Footer Credit */}
+        <div className="flex justify-center pt-2 pb-8 opacity-60">
+           <span className="text-xs font-semibold text-gray-500 tracking-widest font-mono">
+             @acedoctor2026
+           </span>
+        </div>
       </main>
 
       {/* Floating Player Control Bar */}
