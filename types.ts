@@ -6,12 +6,12 @@ export enum SoundCategory {
   HUMAN = 'HUMAN',   // 사람 소리
 }
 
-// Noise types for our synthesizer to emulate
+// Noise types for our synthesizer to emulate (fallback)
 export enum SynthType {
   BROWN = 'brown', // Deep rumble (Vacuum, Thunder)
   PINK = 'pink',   // Balanced (Rain, Leaves)
   WHITE = 'white', // Harsh (Static, Fan)
-  NONE = 'none',   // Complex sounds that can't be easily synthesized in a basic context need a real file
+  NONE = 'none',   // Complex sounds that can't be easily synthesized
 }
 
 export interface SoundItem {
@@ -21,6 +21,7 @@ export interface SoundItem {
   icon: React.ReactNode;
   gradient: string;
   synthType: SynthType; // Fallback generation type
+  src?: string;         // Path to the actual audio file
 }
 
 export interface AudioState {

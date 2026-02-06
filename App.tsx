@@ -30,26 +30,28 @@ const AdBanner: React.FC<AdBannerProps> = ({ variant = 'default' }) => {
       <div className={`
         bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg 
         flex flex-col items-center justify-center text-center overflow-hidden relative mx-auto
-        ${isThin ? 'h-[50px] p-0' : 'p-2 min-h-[100px]'} 
+        ${isThin ? 'h-[60px] max-h-[60px] p-0' : 'h-[110px] max-h-[110px] p-1'} 
       `}>
-        {/* Thin Banner: Strictly 50px height, No padding, No extra elements */}
+        {/* Label */}
+        <span className="absolute top-0 right-1 text-[8px] text-gray-400/50 z-10 font-mono tracking-tighter">AD</span>
         
-        {!isThin && (
-          <span className="absolute top-0 right-1 text-[8px] text-gray-400/40 z-10 font-mono tracking-tighter">Sponsored</span>
-        )}
-        
-        <div className="w-full flex items-center justify-center relative overflow-hidden w-full h-full">
+        <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
            {/* 
               Google AdSense Code 
-              - Client ID: ca-pub-7969346905229420 (Confirmed matching index.html)
-              - Top Banner (Thin): Fixed 50px height.
-              - Bottom Banner: Flexible auto height but starts small.
+              - Client ID: ca-pub-7969346905229420 
+              - Format: 'horizontal' to enforce banner shape and avoid tall squares on mobile.
+              - Height: Explicitly constrained.
            */}
            <ins className="adsbygoogle"
-             style={{ display: 'block', width: '100%', height: isThin ? '50px' : 'auto', minHeight: isThin ? '50px' : '100px' }}
+             style={{ 
+               display: 'inline-block', 
+               width: '100%', 
+               height: isThin ? '50px' : '90px',
+               maxHeight: isThin ? '50px' : '100px'
+             }}
              data-ad-client="ca-pub-7969346905229420"
              data-ad-slot="YOUR_AD_SLOT_ID"
-             data-ad-format={isThin ? undefined : "auto"} // 'undefined' allows exact size control for thin banners
+             data-ad-format="horizontal"
              data-full-width-responsive="true"></ins>
         </div>
       </div>
@@ -75,7 +77,8 @@ const App: React.FC = () => {
     } else {
       // Toggle on
       newActiveSounds.add(sound.id);
-      await audioEngine.play(sound.id, sound.synthType);
+      // Now passes the src property to the engine
+      await audioEngine.play(sound.id, sound.synthType, sound.src);
     }
     
     setActiveSounds(newActiveSounds);
@@ -137,8 +140,8 @@ const App: React.FC = () => {
       {/* Main Content with Sections */}
       <main className="relative z-10 px-4 md:px-6 pb-24 max-w-7xl mx-auto">
         
-        {/* Top Ad Banner - Strictly fixed height wrapper to prevent expansion */}
-        <div className="mb-2 h-[50px] flex items-center justify-center">
+        {/* Top Ad Banner - Strictly fixed height wrapper */}
+        <div className="mb-2 flex items-center justify-center">
           <AdBanner variant="thin" />
         </div>
 

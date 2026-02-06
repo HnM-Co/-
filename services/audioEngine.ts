@@ -1,15 +1,17 @@
 import { SynthType } from '../types';
 
 /**
- * A simple synthesizer class to generate White, Pink, and Brown noise.
- * Updated to support multiple simultaneous sounds (Polyphony).
+ * A hybrid audio engine that plays actual audio files if provided,
+ * or synthesizes noise (White/Pink/Brown) as a fallback.
  */
 class AudioEngine {
   private audioContext: AudioContext | null = null;
   // Map of soundId -> AudioBufferSourceNode
   private sources: Map<string, AudioBufferSourceNode> = new Map();
-  // Map of soundId -> GainNode (individual volume control if needed, but here used for envelope)
+  // Map of soundId -> GainNode
   private gainNodes: Map<string, GainNode> = new Map();
+  // Cache decoded audio buffers to avoid re-fetching
+  private bufferCache: Map<string, AudioBuffer> = new Map();
   
   private masterGain: GainNode | null = null;
   private volumeValue: number = 0.5;
@@ -27,7 +29,29 @@ class AudioEngine {
     }
   }
 
-  // Create a noise buffer
+  // Load and decode an audio file from a URL
+  private async loadAudioFile(url: string): Promise<AudioBuffer | null> {
+    if (this.bufferCache.has(url)) {
+      return this.bufferCache.get(url)!;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+      
+      const arrayBuffer = await response.arrayBuffer();
+      if (!this.audioContext) return null;
+
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      this.bufferCache.set(url, audioBuffer);
+      return audioBuffer;
+    } catch (error) {
+      console.warn(`Audio file load failed for ${url}:`, error);
+      return null;
+    }
+  }
+
+  // Create a synthetic noise buffer (Fallback)
   private createNoiseBuffer(type: SynthType): AudioBuffer | null {
     if (!this.audioContext) return null;
     
@@ -50,7 +74,7 @@ class AudioEngine {
           break;
           
         case SynthType.BROWN:
-          // Brownian noise (1/f^2)
+          // Brownian noise
           const lastOut = (i > 0) ? data[i - 1] : 0;
           data[i] = (lastOut + (0.02 * white)) / 1.02;
           data[i] *= 3.5; 
@@ -61,7 +85,7 @@ class AudioEngine {
       }
     }
     
-    // Better Pink Noise Algo
+    // Better Pink Noise Algorithm
     if (type === SynthType.PINK) {
        let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
        for (let i = 0; i < bufferSize; i++) {
@@ -81,7 +105,7 @@ class AudioEngine {
     return buffer;
   }
 
-  public async play(id: string, type: SynthType) {
+  public async play(id: string, type: SynthType, src?: string) {
     this.initContext();
     
     // Resume context if suspended
@@ -89,18 +113,22 @@ class AudioEngine {
       await this.audioContext.resume();
     }
 
-    // If already playing this ID, stop it first to restart (or do nothing)
-    // Here we return to avoid restarting/glitching
     if (this.sources.has(id)) return;
-
-    if (type === SynthType.NONE) {
-       // Fallback for demo
-       type = SynthType.PINK; 
-    }
-
     if (!this.audioContext || !this.masterGain) return;
 
-    const buffer = this.createNoiseBuffer(type);
+    let buffer: AudioBuffer | null = null;
+
+    // 1. Try to load real file if src is provided
+    if (src) {
+      buffer = await this.loadAudioFile(src);
+    }
+
+    // 2. If no file or load failed, use synthesizer
+    if (!buffer) {
+       console.log(`Using synthetic audio for ${id} (${type})`);
+       buffer = this.createNoiseBuffer(type);
+    }
+
     if (buffer) {
       const source = this.audioContext.createBufferSource();
       const gainNode = this.audioContext.createGain();
@@ -108,12 +136,12 @@ class AudioEngine {
       source.buffer = buffer;
       source.loop = true;
       
-      // Chain: Source -> Individual Gain -> Biquad (optional) -> Master Gain -> Destination
-      
+      // Fade in
       gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(1.0, this.audioContext.currentTime + 1);
+      gainNode.gain.linearRampToValueAtTime(1.0, this.audioContext.currentTime + 0.5);
 
-      if (type === SynthType.BROWN) {
+      // Apply Lowpass filter for Brown noise synth (only if synthesizing)
+      if (!src && type === SynthType.BROWN) {
          const biquadFilter = this.audioContext.createBiquadFilter();
          biquadFilter.type = "lowpass";
          biquadFilter.frequency.setValueAtTime(400, this.audioContext.currentTime);
@@ -124,7 +152,6 @@ class AudioEngine {
       }
 
       gainNode.connect(this.masterGain);
-      
       source.start();
       
       this.sources.set(id, source);
@@ -137,16 +164,16 @@ class AudioEngine {
     const gainNode = this.gainNodes.get(id);
 
     if (source && gainNode && this.audioContext) {
-      // Fade out individual sound
+      // Fade out
       gainNode.gain.cancelScheduledValues(this.audioContext.currentTime);
       gainNode.gain.setValueAtTime(gainNode.gain.value, this.audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.5);
+      gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.3);
 
       setTimeout(() => {
         try { source.stop(); } catch(e) {}
         source.disconnect();
         gainNode.disconnect();
-      }, 500);
+      }, 300);
 
       this.sources.delete(id);
       this.gainNodes.delete(id);
